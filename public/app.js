@@ -8,70 +8,107 @@ const el = (tag, cls, text) => {
   return n;
 };
 
-const state = { me: null, taken: [], online: [], messages: new Map(), skew: 0, ws: null, retry: 0 };
+const state = { me: null, taken: [], online: [], messages: new Map(), skew: 0, v: -1, lastTs: 0, fails: 0, lastInput: Date.now() };
 const input = $('input');
 
-// ---------- connection ----------
-function connect() {
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
-  state.ws = ws;
-  setStatus('connecting…');
-  ws.onopen = () => {
-    state.retry = 0;
-    setStatus('live', true);
-  };
-  ws.onclose = () => {
-    setStatus('reconnecting…');
-    setTimeout(connect, Math.min(15000, 1000 * 2 ** state.retry++));
-  };
-  ws.onmessage = (ev) => {
-    let msg;
-    try {
-      msg = JSON.parse(ev.data);
-    } catch {
-      return;
-    }
-    handle[msg.t]?.(msg);
-  };
-}
-function send(obj) {
-  if (state.ws?.readyState !== 1) return false;
-  state.ws.send(JSON.stringify(obj));
-  return true;
+// ---------- API (HTTP polling; works on serverless hosts) ----------
+async function api(action, body) {
+  const opts = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : { cache: 'no-store' };
+  const qs = action === 'feed' ? `&since=${Math.max(0, state.lastTs - 1000)}` : '';
+  const res = await fetch(`/api/chat?a=${action}${qs}`, { credentials: 'same-origin', ...opts });
+  const data = await res.json().catch(() => ({ error: 'Server error.' }));
+  if (!res.ok) throw Object.assign(new Error(data.error || 'Error'), { status: res.status });
+  return data;
 }
 
-const handle = {
-  hello(m) {
-    state.skew = m.now - Date.now();
-    state.messages.clear();
-    $('timeline').replaceChildren();
-    for (const x of m.messages) addPost(x, false);
-    setMe(m.me);
-    setQuota(m.left, m.limit);
-    if (!m.me) openPicker();
-  },
-  presence(m) {
-    state.taken = m.taken;
-    state.online = m.online;
-    renderOnline();
-    renderGrid();
-  },
-  claimed(m) {
-    setMe(m.emoji);
-    if (m.emoji) $('picker').close();
-    else renderGrid();
-  },
-  msg(m) {
-    addPost(m.m, true);
-  },
-  quota(m) {
-    setQuota(m.left);
-  },
-  error(m) {
-    if ($('picker').open) $('picker-error').textContent = m.reason;
-    else toast(m.reason);
-  },
-};
+function showError(msg) {
+  if ($('picker').open) $('picker-error').textContent = msg;
+  else toast(msg);
+}
+
+async function loadFeed() {
+  const f = await api('feed');
+  state.skew = f.now - Date.now();
+  state.v = f.v;
+  for (const m of f.posts) {
+    addPost(m, state.lastTs > 0);
+    state.lastTs = Math.max(state.lastTs, m.ts);
+  }
+  state.taken = f.taken;
+  state.online = f.online;
+  renderOnline();
+  if (f.me !== state.me) setMe(f.me);
+  setQuota(f.left, f.limit);
+  renderGrid();
+  return f;
+}
+
+// Poll a tiny shared version number; only fetch the feed when it changes.
+// Fast while you're active, slower when idle, paused when the tab is hidden.
+let pollTimer;
+async function poll() {
+  clearTimeout(pollTimer);
+  if (document.hidden) return;
+  try {
+    const { v } = await api('ver');
+    if (v !== state.v) await loadFeed();
+    state.fails = 0;
+    setStatus('live', true);
+  } catch {
+    state.fails++;
+    setStatus('reconnecting…');
+  }
+  const idle = Date.now() - state.lastInput > 5 * 60_000;
+  const delay = state.fails ? Math.min(30_000, 2000 * 2 ** state.fails) : idle ? 15_000 : 3000;
+  pollTimer = setTimeout(poll, delay);
+}
+
+let pingTimer;
+function heartbeat() {
+  clearInterval(pingTimer);
+  pingTimer = setInterval(() => {
+    if (state.me && !document.hidden) api('ping', {}).catch(() => {});
+  }, 30_000);
+}
+
+document.addEventListener('visibilitychange', () => !document.hidden && poll());
+for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => (state.lastInput = Date.now()), { passive: true });
+
+async function start() {
+  setStatus('connecting…');
+  try {
+    const f = await loadFeed();
+    setStatus('live', true);
+    if (!f.me) openPicker();
+  } catch (err) {
+    setStatus('offline');
+    showError(err.message);
+  }
+  heartbeat();
+  pollTimer = setTimeout(poll, 3000);
+}
+
+async function claimEmoji(emoji) {
+  try {
+    const r = await api('claim', { emoji });
+    setMe(r.me);
+    $('picker').close();
+    await loadFeed();
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+async function releaseEmoji() {
+  try {
+    setMe((await api('release', {})).me);
+    await loadFeed();
+  } catch (err) {
+    showError(err.message);
+  }
+}
 
 // ---------- identity ----------
 function setMe(emoji) {
@@ -93,7 +130,7 @@ function renderGrid() {
       b.setAttribute('aria-label', b.disabled ? `${e} taken` : `Choose ${e}`);
       b.onclick = () => {
         $('picker-error').textContent = '';
-        send({ t: 'claim', emoji: e });
+        claimEmoji(e);
       };
       return b;
     }),
@@ -155,11 +192,22 @@ input.addEventListener('focus', () => !state.me && openPicker());
 // Block drag-and-drop of rich content; paste goes through the input sanitizer.
 input.addEventListener('drop', (e) => e.preventDefault());
 
-function post() {
+let posting = false;
+async function post() {
   const text = input.value.trim();
-  if ($('send').disabled || checkPlaintext(text)) return;
-  if (send({ t: 'post', bin: toBinary(text) })) {
+  if (posting || $('send').disabled || checkPlaintext(text)) return;
+  posting = true;
+  $('send').disabled = true;
+  try {
+    const r = await api('post', { bin: toBinary(text) });
     input.value = '';
+    addPost(r.m, true);
+    state.lastTs = Math.max(state.lastTs, r.m.ts);
+    setQuota(r.left);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    posting = false;
     updateComposer();
   }
 }
@@ -169,7 +217,7 @@ $('nav-handle').onclick = openPicker;
 $('nav-about').onclick = () => $('about').showModal();
 $('about-close').onclick = () => $('about').close();
 $('picker-close').onclick = () => $('picker').close();
-$('release').onclick = () => send({ t: 'release' });
+$('release').onclick = releaseEmoji;
 
 // ---------- timeline ----------
 const now = () => Date.now() + state.skew;
@@ -260,4 +308,4 @@ function toast(text) {
 
 renderOnline();
 updateComposer();
-connect();
+start();
