@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { memoryStore } from '../lib/store.js';
+import { memoryStore, findRedisConfig, storageVarNames } from '../lib/store.js';
 import { SECURITY_HEADERS } from '../lib/headers.js';
 
 test('memory store mirrors the Redis commands the chat uses', async () => {
@@ -51,4 +51,25 @@ test('Vercel function explains missing storage instead of crashing', async () =>
   delete process.env.VERCEL;
   assert.equal(status, 503);
   assert.match(JSON.parse(body).error, /Storage/);
+});
+
+test('finds Redis settings under every naming Vercel integrations use', () => {
+  const rest = (env) => findRedisConfig(env);
+  assert.equal(rest({ KV_REST_API_URL: 'https://a', KV_REST_API_TOKEN: 't' }).kind, 'rest');
+  assert.equal(rest({ UPSTASH_REDIS_REST_URL: 'https://a', UPSTASH_REDIS_REST_TOKEN: 't' }).kind, 'rest');
+  assert.deepEqual(rest({ STORAGE_KV_REST_API_URL: 'https://a', STORAGE_KV_REST_API_TOKEN: 't' }).vars, [
+    'STORAGE_KV_REST_API_URL',
+    'STORAGE_KV_REST_API_TOKEN',
+  ]);
+  assert.equal(rest({ REDIS_URL: 'rediss://default:x@h:6379' }).kind, 'tcp');
+  assert.equal(rest({ KV_URL: 'redis://h:6379' }).kind, 'tcp');
+  assert.equal(rest({ SHADOW_REDIS_URL: 'rediss://h:6379' }).kind, 'tcp');
+  assert.equal(rest({ KV_REST_API_URL: 'https://a' }).kind, 'none'); // token missing
+  assert.equal(rest({ REDIS_URL: 'not-a-url' }).kind, 'none');
+  assert.equal(rest({}).kind, 'none');
+});
+
+test('health lists storage variable names only', () => {
+  const names = storageVarNames({ REDIS_URL: 'rediss://secret', KV_REST_API_TOKEN: 'secret', PATH: '/bin' });
+  assert.deepEqual(names, ['KV_REST_API_TOKEN', 'REDIS_URL']);
 });

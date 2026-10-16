@@ -17,6 +17,8 @@ It's styled like an old-school imageboard: a pale green board, a `/01/` header, 
 
 Without step 2 the site loads, but the chat says "Storage not set up" instead of crashing.
 
+**Check it:** open `https://<your-site>/api/chat?a=health`. It shows which storage it's using (`rest` or `tcp`), whether it answers (`ok`), and the *names* of the storage variables it can see (never their values).
+
 ## Run it locally
 
 ```bash
@@ -32,7 +34,7 @@ Environment variables:
 
 | Var | Default | Meaning |
 | --- | --- | --- |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | set by Vercel Storage | Redis REST endpoint and token (`UPSTASH_REDIS_REST_*` also work) |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or `REDIS_URL` | set by Vercel Storage | Any of these work: `KV_*`, `UPSTASH_REDIS_REST_*`, a custom prefix (`<PREFIX>_KV_REST_API_URL`), or a plain `redis://` / `rediss://` URL (`REDIS_URL`, `KV_URL`, `<PREFIX>_REDIS_URL`) |
 | `DAILY_LIMIT` | `100` | Posts allowed per rolling 24h, per session **and** per network |
 | `ALLOWED_ORIGINS` | same host | Comma-separated origins allowed to post |
 | `PORT` | `3000` | Local server port |
@@ -43,8 +45,8 @@ Environment variables:
 Vercel functions can't hold WebSockets or keep memory between requests, so:
 
 - **State lives in Redis**: posts, emoji claims, network locks, quotas and rate limits, all with 24h expiry.
-- **Browsers poll** a tiny version number every 3s, or every 15s when idle, and stop while the tab is hidden. That reply is cached by Vercel's CDN for 3s and shared by every visitor, so polling costs at most about one Redis read per 3s no matter how many people are watching. The full feed is fetched only when the version changes.
-- New posts show up for others within about 3 seconds.
+- **Browsers poll** a tiny version number every 5s, or every 20s when idle, and stop while the tab is hidden. That reply is cached by Vercel's CDN for 5s and shared by every visitor, so polling costs at most about one Redis read per 5s no matter how many people are watching. The full feed is fetched only when the version changes.
+- New posts show up for others within about 5 seconds.
 
 ## Install as an app
 

@@ -38,10 +38,20 @@ test('hardened headers, session cookie, no path traversal', async () => {
 
 test('version endpoint is CDN-cacheable and sets no cookie', async () => {
   const res = await fetch(`${base}/api/chat?a=ver`);
-  assert.match(res.headers.get('cache-control'), /s-maxage=3/);
+  assert.match(res.headers.get('cache-control'), /s-maxage=5/);
   assert.equal(res.headers.get('set-cookie'), null);
   assert.equal(typeof (await res.json()).v, 'number');
   assert.equal((await fetch(`${base}/api/chat?a=ver&bust=1`)).status, 400);
+});
+
+test('health check reports storage kind and no secrets', async () => {
+  const r = await fetch(`${base}/api/chat?a=health`);
+  assert.equal(r.status, 200);
+  const h = await r.json();
+  assert.equal(h.storage, process.env.REDIS_URL ? 'tcp' : 'memory');
+  assert.equal(h.ok, true);
+  assert.ok(Array.isArray(h.found));
+  assert.equal((await fetch(`${base}/api/chat?a=health&x=1`)).status, 400);
 });
 
 test('rejects cross-origin, cookieless and non-JSON writes', async () => {
