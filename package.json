@@ -1,0 +1,18 @@
+{
+  "name": "sha-dow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental 24-hour chat where every post is binary and every handle is an emoji.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

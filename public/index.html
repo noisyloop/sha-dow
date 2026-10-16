@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>sha-dow</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='14' font-weight='700' fill='%23fff' text-anchor='middle'%3E01%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <nav class="side-nav" aria-label="Main">
+      <a class="logo" href="/" aria-label="sha-dow home">01</a>
+      <a class="nav-item active" href="/"><span class="nav-ico" aria-hidden="true">⌂</span><span class="nav-label">Home</span></a>
+      <button class="nav-item" id="nav-handle" type="button"><span class="nav-ico" aria-hidden="true">☺</span><span class="nav-label">Handle</span></button>
+      <button class="nav-item" id="nav-about" type="button"><span class="nav-ico" aria-hidden="true">ⓘ</span><span class="nav-label">About</span></button>
+      <button class="post-btn wide" id="nav-post" type="button">Post</button>
+      <div class="me-chip" id="me-chip" hidden>
+        <span class="avatar" id="me-avatar"></span>
+        <span class="me-text"><b>Anonymous</b><span class="muted" id="me-handle"></span></span>
+      </div>
+    </nav>
+
+    <main class="feed" aria-label="Timeline">
+      <header class="feed-head">
+        <h1>Home</h1>
+        <div class="tabs"><span class="tab active">For you</span><span class="status" id="status">connecting…</span></div>
+      </header>
+
+      <section class="composer" aria-label="Compose">
+        <span class="avatar" id="composer-avatar">?</span>
+        <div class="composer-body">
+          <textarea id="input" rows="2" maxlength="280" placeholder="What's happening?" autocomplete="off" spellcheck="false" aria-describedby="preview"></textarea>
+          <div class="preview mono" id="preview" aria-live="polite"></div>
+          <div class="composer-foot">
+            <span class="hint" id="hint">Plain text only · auto-encoded to binary</span>
+            <span class="counter" id="counter">280</span>
+            <button class="post-btn" id="send" type="button" disabled>Post</button>
+          </div>
+          <div class="quota muted" id="quota"></div>
+        </div>
+      </section>
+
+      <ol class="timeline" id="timeline" aria-live="polite"></ol>
+      <p class="empty muted" id="empty">Nothing here yet. Everything vanishes 24 hours after it's posted.</p>
+    </main>
+
+    <aside class="right" aria-label="Sidebar">
+      <section class="card">
+        <h2>Who's here</h2>
+        <div class="online" id="online"></div>
+        <p class="muted small" id="online-count"></p>
+      </section>
+      <section class="card">
+        <h2>How it works</h2>
+        <ul class="rules">
+          <li>Pick an emoji. One per person, one per network.</li>
+          <li>Every post is encoded to binary before it leaves your device.</li>
+          <li>Press and hold a post to peek at it on your screen only.</li>
+          <li>Plain text only. No links, code or pre-encoded blobs.</li>
+          <li>100 posts per day.</li>
+          <li>Everything is deleted after 24 hours.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="disclaimer">
+    <p><b>Experimental chat.</b> sha-dow is an experiment provided as-is, with no warranty. Binary is an <i>encoding</i>, not encryption: anyone can decode posts, so don't share anything sensitive. All applicable local, national and international laws apply to everything you post. Do not post illegal content, harassment, threats or personal information about others. Abuse may be rate-limited, blocked or reported. Posts are kept in server memory only and deleted after 24 hours. By using this site you accept these terms.</p>
+  </footer>
+
+  <dialog id="picker" aria-labelledby="picker-title">
+    <h2 id="picker-title">Choose your emoji</h2>
+    <p class="muted small">This is your handle. Two people can't share one. Greyed-out emoji are taken.</p>
+    <div class="grid" id="grid"></div>
+    <p class="error" id="picker-error" role="alert"></p>
+    <div class="dialog-foot">
+      <button type="button" class="ghost" id="release">Give up my emoji</button>
+      <button type="button" class="ghost" id="picker-close">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="about" aria-labelledby="about-title">
+    <h2 id="about-title">About sha-dow</h2>
+    <p>A 24-hour public room where every post is shown as binary. No accounts, no email, no phone number: your identity is an emoji.</p>
+    <p class="muted small">Inspired by Shadow, a research protocol with no phone number and no central identity. Planned next: end-to-end encrypted 1:1 rooms.</p>
+    <div class="dialog-foot"><button type="button" class="ghost" id="about-close">Close</button></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
