@@ -1,4 +1,4 @@
-import { EMOJIS, MAX_CHARS, TTL_MS, ALLOWED_HINT, sanitizeInput, checkPlaintext, toBinary, decodeBinary } from '/shared/rules.js';
+import { EMOJIS, MAX_CHARS, TTL_MS, ALLOWED_HINT, sanitizeInput, checkPlaintext, toBinary, decodeBinary } from './shared/rules.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {

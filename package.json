@@ -9,10 +9,16 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node server.js",
+    "build": "node build.mjs",
+    "start": "npm run build && node server.js",
+    "dev": "STATIC_DIR=public node server.js",
     "test": "node --test"
   },
   "dependencies": {
     "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "javascript-obfuscator": "^5.9.0"
   }
 }

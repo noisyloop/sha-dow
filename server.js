@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { TTL_MS, isValidEmoji, decodeBinary } from './public/shared/rules.js';
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+import { existsSync } from 'node:fs';
+
+// Serves the obfuscated build (dist/) when it exists, otherwise the readable sources (public/).
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(HERE, process.env.STATIC_DIR || (existsSync(path.join(HERE, 'dist', 'index.html')) ? 'dist' : 'public'));
 const PORT = Number(process.env.PORT) || 3000;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);

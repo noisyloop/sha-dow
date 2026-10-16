@@ -13,7 +13,8 @@ It's styled like an old-school imageboard: a pale green board, a `/01/` header, 
 
 ```bash
 npm install
-npm start          # http://localhost:3000
+npm start          # builds dist/ (minified + scrambled), serves it on http://localhost:3000
+npm run dev        # serves the readable sources in public/ (for development)
 npm test           # rules + server tests
 ```
 
@@ -61,7 +62,7 @@ Anything a browser runs can be read with "View source" or DevTools, whatever the
 - It re-validates every payload, enforces the emoji and network locks, and applies the rate limits.
 - Someone who reads, or rewrites, `app.js` still can't post HTML, code, other encodings, a taken emoji, or post number 101 of the day.
 
-The server code (`server.js`) is never sent to browsers. Keeping the client code small and readable is a deliberate feature: anyone can check that posts are only encoded, not secretly tracked. If you want it harder to skim later, a bundler with minification (esbuild) is a one-line build step. Treat that as cosmetic, not security.
+The server code (`server.js`) is never sent to browsers. Keeping the client code small and readable is a deliberate feature: anyone can check that posts are only encoded, not secretly tracked. `npm start` still minifies and scrambles it (`build.mjs`: esbuild, then javascript-obfuscator), so `dist/app.js` is unreadable at a glance. The obfuscator settings that need `eval` are off, and the build fails if any `eval` or `Function` sneaks in, so the strict CSP stays on. Treat this as cosmetic, not security.
 
 ## What we could cook up next
 
