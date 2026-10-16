@@ -19,7 +19,8 @@ const COOKIE = 'sd_sid';
 const SALT = crypto.randomBytes(32);
 
 // ---------- in-memory state (a restart wipes everything, by design) ----------
-const messages = []; // { id, emoji, bin, ts }
+const messages = []; // { id, no, emoji, bin, ts }
+let postNo = 0; // imageboard-style post numbers, reset on restart
 const claims = new Map(); // emoji -> { sid, ip, lastSeen }
 const sockets = new Set(); // ws (ws.sid, ws.ip)
 const buckets = new Map(); // key -> { tokens, at }
@@ -222,7 +223,7 @@ wss.on('connection', (ws) => {
       const last = messages.findLast((m) => m.emoji === emoji);
       if (last && last.bin === msg.bin && Date.now() - last.ts < 60_000)
         return send(ws, { t: 'error', reason: 'No duplicate posts.' });
-      const m = { id: crypto.randomUUID(), emoji, bin: msg.bin, ts: Date.now() };
+      const m = { id: crypto.randomUUID(), no: ++postNo, emoji, bin: msg.bin, ts: Date.now() };
       messages.push(m);
       spendQuota(ws, m.ts);
       send(ws, { t: 'quota', left: quotaLeft(ws) });

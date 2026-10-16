@@ -2,12 +2,11 @@
 
 An experimental, free, 24-hour public chat. Your handle is an emoji, every post is shown as binary, and everything is deleted after 24 hours.
 
-It's styled like X: a dark three-column layout, a "What's happening?" composer, and a timeline of posts.
+It's styled like an old-school imageboard: a pale green board, a `/01/` header, a table-style post form (no attachments, ever), and reply boxes with post numbers. It works on mobile, and there's a dark variant that follows your system setting.
 
 ```
-🦊  Anonymous @🦊 · 2m
-    01100111 01101101 00100000 01100101 01110110 01100101 01110010 01111001
-    ⏳ 24h left   8 bytes
+>> 🦊 Anonymous 10/16/26(Fri)09:45:48 No.2 [burns in 24h]
+     01100111 01101101 00100000 01100101 01110110 01100101 01110010 01111001
 ```
 
 ## Run it
@@ -54,6 +53,15 @@ It needs a host that keeps WebSockets open (Render, Fly.io, Railway, a VPS). Ver
 - Binary is an **encoding, not encryption**. Anyone can decode it, and the footer says so.
 - IP locks are a deterrent. VPNs and mobile data get around them. Shared networks (a household, school or carrier NAT) get **one emoji between everyone on them**, and share the daily quota too.
 - In-memory state means one server process. Scaling out needs a shared store (below).
+
+## Why there's no React, Astro or code hiding
+
+Anything a browser runs can be read with "View source" or DevTools, whatever the framework. React or Astro would bundle and minify the code, but anyone determined can still read it. Security here comes from the **server**, which doesn't trust the client at all:
+
+- It re-validates every payload, enforces the emoji and network locks, and applies the rate limits.
+- Someone who reads, or rewrites, `app.js` still can't post HTML, code, other encodings, a taken emoji, or post number 101 of the day.
+
+The server code (`server.js`) is never sent to browsers. Keeping the client code small and readable is a deliberate feature: anyone can check that posts are only encoded, not secretly tracked. If you want it harder to skim later, a bundler with minification (esbuild) is a one-line build step. Treat that as cosmetic, not security.
 
 ## What we could cook up next
 

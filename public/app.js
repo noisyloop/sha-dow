@@ -76,12 +76,10 @@ const handle = {
 // ---------- identity ----------
 function setMe(emoji) {
   state.me = emoji;
-  $('composer-avatar').textContent = emoji || '?';
-  $('me-avatar').textContent = emoji || '';
-  $('me-handle').textContent = emoji ? `@${emoji}` : '';
-  $('me-chip').hidden = !emoji;
+  $('me-avatar').textContent = emoji || '?';
+  $('me-handle').textContent = emoji ? 'Anonymous' : 'pick an emoji';
   $('release').hidden = !emoji;
-  input.placeholder = emoji ? "What's happening?" : 'Pick an emoji to post';
+  input.placeholder = emoji ? '' : 'Pick an emoji name first';
   updateComposer();
 }
 
@@ -111,14 +109,16 @@ function openPicker() {
 function renderOnline() {
   $('online').replaceChildren(...state.online.map((e) => el('span', null, e)));
   const n = state.online.length;
-  $('online-count').textContent = n ? `${n} online now` : 'Nobody online yet.';
+  $('online-count').textContent = n ? `(${n})` : 'nobody yet';
 }
 
 // ---------- composer ----------
 let quotaLeft = null;
+let quotaLimit = 100;
 function setQuota(left, limit) {
   quotaLeft = left;
-  $('quota').textContent = left == null ? '' : `${left}${limit ? ` / ${limit}` : ''} posts left today`;
+  if (limit) quotaLimit = limit;
+  $('quota').textContent = left == null ? '' : `${left} / ${quotaLimit} posts left today.`;
   updateComposer();
 }
 
@@ -164,8 +164,7 @@ function post() {
   }
 }
 $('send').onclick = post;
-$('nav-post').onclick = () => (state.me ? input.focus() : openPicker());
-$('composer-avatar').onclick = openPicker;
+$('name-btn').onclick = openPicker;
 $('nav-handle').onclick = openPicker;
 $('nav-about').onclick = () => $('about').showModal();
 $('about-close').onclick = () => $('about').close();
@@ -174,34 +173,41 @@ $('release').onclick = () => send({ t: 'release' });
 
 // ---------- timeline ----------
 const now = () => Date.now() + state.skew;
-const ago = (ts) => {
-  const s = Math.max(0, (now() - ts) / 1000);
-  if (s < 60) return `${Math.floor(s)}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  return `${Math.floor(s / 3600)}h`;
+// Classic board timestamp: 10/16/26(Thu)09:41:12
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const pad = (n) => String(n).padStart(2, '0');
+const stamp = (ts) => {
+  const d = new Date(ts - state.skew);
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${pad(d.getFullYear() % 100)}(${DAYS[d.getDay()]})` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 const remaining = (ts) => {
-  const m = Math.max(0, (ts + TTL_MS - now()) / 60000);
-  return m > 60 ? `${Math.ceil(m / 60)}h left` : `${Math.ceil(m)}m left`;
+  const m = Math.min(TTL_MS / 60000, Math.max(0, (ts + TTL_MS - now()) / 60000));
+  return m > 60 ? `burns in ${Math.ceil(m / 60)}h` : `burns in ${Math.ceil(m)}m`;
 };
 
 function addPost(m, fresh) {
   // Validate everything from the wire, even from our own server.
-  if (!m || typeof m.id !== 'string' || !EMOJIS.includes(m.emoji) || !Number.isFinite(m.ts)) return;
+  if (!m || typeof m.id !== 'string' || !EMOJIS.includes(m.emoji) || !Number.isFinite(m.ts) || !Number.isInteger(m.no)) return;
   if (state.messages.has(m.id) || decodeBinary(m.bin) === null) return;
   state.messages.set(m.id, m);
 
   const li = el('li', fresh ? 'post new' : 'post');
   li.dataset.id = m.id;
-  const main = el('div', 'post-main');
+  li.id = `p${m.no}`;
+  const box = el('div', 'post-box');
   const meta = el('div', 'post-meta');
-  meta.append(el('b', null, 'Anonymous'), el('span', null, `@${m.emoji}`), el('span', null, '·'), el('span', 'ago', ago(m.ts)));
+  meta.append(
+    el('span', 'emoji', m.emoji),
+    el('span', 'name', 'Anonymous'),
+    el('span', 'date', stamp(m.ts)),
+    el('span', 'no', `No.${m.no}`),
+    el('span', 'ttl', `[${remaining(m.ts)}]`),
+  );
   const bits = el('div', 'bits', m.bin);
   bits.title = 'Press and hold to peek';
-  const foot = el('div', 'post-foot');
-  foot.append(el('span', 'ttl', `⏳ ${remaining(m.ts)}`), el('span', null, `${m.bin.split(' ').length} bytes`));
-  main.append(meta, bits, foot);
-  li.append(el('span', 'avatar', m.emoji), main);
+  box.append(meta, bits);
+  li.append(box);
   bindPeek(bits, m.bin);
   $('timeline').prepend(li);
   $('empty').hidden = true;
@@ -233,8 +239,7 @@ setInterval(() => {
       li.remove();
       continue;
     }
-    li.querySelector('.ago').textContent = ago(m.ts);
-    li.querySelector('.ttl').textContent = `⏳ ${remaining(m.ts)}`;
+    li.querySelector('.ttl').textContent = `[${remaining(m.ts)}]`;
   }
   $('empty').hidden = state.messages.size > 0;
 }, 15000);
