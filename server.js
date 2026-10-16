@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { TTL_MS, isValidEmoji, decodeBinary } from './public/shared/rules.js';
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+import { existsSync } from 'node:fs';
+
+// Serves the obfuscated build (dist/) when it exists, otherwise the readable sources (public/).
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(HERE, process.env.STATIC_DIR || (existsSync(path.join(HERE, 'dist', 'index.html')) ? 'dist' : 'public'));
 const PORT = Number(process.env.PORT) || 3000;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
@@ -19,7 +23,8 @@ const COOKIE = 'sd_sid';
 const SALT = crypto.randomBytes(32);
 
 // ---------- in-memory state (a restart wipes everything, by design) ----------
-const messages = []; // { id, emoji, bin, ts }
+const messages = []; // { id, no, emoji, bin, ts }
+let postNo = 0; // imageboard-style post numbers, reset on restart
 const claims = new Map(); // emoji -> { sid, ip, lastSeen }
 const sockets = new Set(); // ws (ws.sid, ws.ip)
 const buckets = new Map(); // key -> { tokens, at }
@@ -222,7 +227,7 @@ wss.on('connection', (ws) => {
       const last = messages.findLast((m) => m.emoji === emoji);
       if (last && last.bin === msg.bin && Date.now() - last.ts < 60_000)
         return send(ws, { t: 'error', reason: 'No duplicate posts.' });
-      const m = { id: crypto.randomUUID(), emoji, bin: msg.bin, ts: Date.now() };
+      const m = { id: crypto.randomUUID(), no: ++postNo, emoji, bin: msg.bin, ts: Date.now() };
       messages.push(m);
       spendQuota(ws, m.ts);
       send(ws, { t: 'quota', left: quotaLeft(ws) });
