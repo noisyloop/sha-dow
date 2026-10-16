@@ -59,5 +59,9 @@ const html = (await fs.readFile('public/index.html', 'utf8'))
   .trim();
 await fs.writeFile(`${OUT}/index.html`, html);
 
+// App install assets are copied as-is.
+for (const f of ['manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'])
+  await fs.copyFile(`public/${f}`, `${OUT}/${f}`);
+
 const kb = (s) => (Buffer.byteLength(s) / 1024).toFixed(1) + ' KB';
 console.log(`dist/app.js ${kb(scrambled)} · dist/style.css ${kb(css.outputFiles[0].text)} · dist/index.html ${kb(html)}`);

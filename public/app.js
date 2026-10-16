@@ -219,6 +219,26 @@ $('about-close').onclick = () => $('about').close();
 $('picker-close').onclick = () => $('picker').close();
 $('release').onclick = releaseEmoji;
 
+// ---------- install as an app ----------
+let installPrompt = null;
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (!standalone) $('nav-install-wrap').hidden = false;
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // show our own [install] link instead of the mini-infobar
+  installPrompt = e;
+});
+addEventListener('appinstalled', () => ($('nav-install-wrap').hidden = true));
+$('nav-install').onclick = async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+  } else {
+    $('install').showModal();
+  }
+};
+$('install-close').onclick = () => $('install').close();
+
 // ---------- timeline ----------
 const now = () => Date.now() + state.skew;
 // Classic board timestamp: 10/16/26(Thu)09:41:12

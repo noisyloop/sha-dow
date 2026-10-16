@@ -102,6 +102,8 @@ dialog::backdrop { background: rgba(30, 40, 20, .45); }
 .grid button:hover:not(:disabled) { border-color: var(--title); background: var(--label); }
 .grid button.mine { border: 2px solid var(--name); }
 .grid button:disabled { opacity: .2; filter: grayscale(1); cursor: not-allowed; }
+.steps { padding-left: 18px; margin: 6px 0 0; }
+.steps li { margin: 4px 0; }
 .error { color: var(--danger); min-height: 1.2em; font-weight: 700; margin: 4px 0; }
 
 .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--reply); color: var(--text); border: 1px solid var(--label-line); padding: 6px 14px; z-index: 10; max-width: calc(100vw - 32px); font-weight: 700; }
