@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#d4e1bf"/>
+  <rect x="40" y="40" width="432" height="432" fill="#e8efd9" stroke="#7f9c58" stroke-width="12"/>
+  <text x="256" y="318" font-family="Courier New, monospace" font-size="200" font-weight="700" fill="#2f5a1e" text-anchor="middle">01</text>
+  <text x="256" y="400" font-family="Courier New, monospace" font-size="40" fill="#5f7d14" text-anchor="middle" opacity=".7">sha-dow</text>
+</svg>

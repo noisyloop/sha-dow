@@ -46,12 +46,23 @@ Vercel functions can't hold WebSockets or keep memory between requests, so:
 - **Browsers poll** a tiny version number every 3s, or every 15s when idle, and stop while the tab is hidden. That reply is cached by Vercel's CDN for 3s and shared by every visitor, so polling costs at most about one Redis read per 3s no matter how many people are watching. The full feed is fetched only when the version changes.
 - New posts show up for others within about 3 seconds.
 
+## Install as an app
+
+sha-dow is an installable web app (PWA). Visitors get their own window and icon, with nothing to download and no installer warnings:
+
+- **Chrome / Edge** (Windows, Mac, Linux, ChromeOS): `[install]` in the top nav opens the browser's install prompt.
+- **Mac Safari:** File → Add to Dock. **iPhone / iPad:** Share → Add to Home Screen. **Android:** menu → Install app.
+- `[install]` shows these steps when the browser has no install prompt, and hides itself once the app is installed.
+
+Native `.exe` / `.dmg` builds (Tauri) are possible later. Without paid code signing, Windows shows a SmartScreen warning and macOS blocks the first launch.
+
 ## How it works
 
 - **Emoji handles.** You pick from a fixed list of 64 emoji, not a free-text emoji field. A fixed list rules out look-alikes, zero-width joiners and invisible characters.
 - **One emoji per person.** A handle is locked to a server-issued `HttpOnly; SameSite=Strict` session cookie. Nobody else can take it while you hold it, and it frees up 24h after you were last seen. You can also give it up.
 - **One emoji per network.** A second session from the same IP can't claim a different emoji. IPv6 addresses are grouped by /64. IPs are stored only as HMACs, with a random salt that rotates every 24 hours.
 - **Always binary.** The client encodes text to 8-bit binary before sending. The server stores and serves only binary. The timeline shows binary. Press and hold a post to decode it on your own screen; letting go shows the binary again.
+- **No autofill.** There's no `<form>` and no named fields. The comment box turns off autocomplete, autocorrect, autocapitalize, spellcheck and Chrome's writing suggestions, and tells LastPass, 1Password, Bitwarden and Dashlane to ignore it. Whatever gets inserted still goes through the character filter.
 - **Plain text only.** Allowed: `A–Z a–z 0–9`, space, and `. , ! ? ' ( ) : ;` plus the hyphen. Blocked: `< > & " \` { } [ ] / \ = $ # @ …`, which rules out markup, code, URLs and templates. Pre-encoded binary, hex and base64-looking words, and words longer than 24 characters, are rejected too. Posts are capped at 280 characters.
 - **24 hours, then gone.** Every Redis key has a 24h expiry. Posts are removed 24h after they're posted, and handles 24h after you were last seen. The app logs no post content.
 
