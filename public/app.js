@@ -61,7 +61,7 @@ async function poll() {
     setStatus('reconnecting…');
   }
   const idle = Date.now() - state.lastInput > 5 * 60_000;
-  const delay = state.fails ? Math.min(30_000, 2000 * 2 ** state.fails) : idle ? 15_000 : 3000;
+  const delay = state.fails ? Math.min(30_000, 2000 * 2 ** state.fails) : idle ? 20_000 : 5000;
   pollTimer = setTimeout(poll, delay);
 }
 
@@ -70,7 +70,7 @@ function heartbeat() {
   clearInterval(pingTimer);
   pingTimer = setInterval(() => {
     if (state.me && !document.hidden) api('ping', {}).catch(() => {});
-  }, 30_000);
+  }, 60_000);
 }
 
 document.addEventListener('visibilitychange', () => !document.hidden && poll());
@@ -87,7 +87,7 @@ async function start() {
     showError(err.message);
   }
   heartbeat();
-  pollTimer = setTimeout(poll, 3000);
+  pollTimer = setTimeout(poll, 5000);
 }
 
 async function claimEmoji(emoji) {

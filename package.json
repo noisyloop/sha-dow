@@ -17,5 +17,8 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "javascript-obfuscator": "^5.9.0"
+  },
+  "dependencies": {
+    "redis": "^5.12.1"
   }
 }
